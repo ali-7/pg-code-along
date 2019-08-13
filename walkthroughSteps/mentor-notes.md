@@ -59,3 +59,33 @@ git clone https://github.com/ali-7/pg-code-along.git
         ```
 
         - Rows separated with commas and each bracket, `(comma-separated values inside here)`, has a row inside it with values
+
+## Step 3 – Creating the database
+
+We will be using an autocomplete client `pgcli`, [reference here](https://github.com/macintoshhelper/learn-sql/blob/master/postgresql/setup.md#bonus---installing-an-autocomplete-client)
+
+We will be using these commands to create our database and user for it.
+
+> Note that password is a string inside '' (NOT double quotes "")
+
+```
+CREATE DATABASE db_name;
+CREATE USER user_name WITH SUPERUSER PASSWORD 'password';
+ALTER DATABASE db_name OWNER TO user_name;
+```
+
+1. In your command line, run `pgcli`.
+
+2. Create the database by typing `CREATE DATABASE film;` into your Postgres CLI client.
+
+3. Create a user specifically for the database with a password by typing `CREATE USER [the new username] WITH SUPERUSER PASSWORD '[the password of the database]'`;
+
+4. Change ownership of the database to the new user by typing `ALTER DATABASE db_name OWNER TO user_name;`.
+
+5. Add a config.env file and add the database's url in this format: `DB_URL = postgres://[username]:[password]@localhost:5432/[database]`
+    - Don't use semi-colons or apostrophes for strings in `config.env`, or use alternative JSON notation
+
+6. Try connecting to the database by typing `pgcli postgres://[username]:[password]@localhost:5432/[database]`.
+
+If you experience permission problems, try running `pgcli film` then `GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO [the new username];`
+
