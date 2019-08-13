@@ -89,3 +89,98 @@ ALTER DATABASE db_name OWNER TO user_name;
 
 If you experience permission problems, try running `pgcli film` then `GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO [the new username];`
 
+## Step 4 – Connecting and building the database
+Pg is a non-blocking PostgreSQL client for node.js that lets you access SQL values as JavaScript data values. Translates data types appropriately to/from JS data types.
+
+Our database is now outlined, but we need a way to connect it
+
+1. Create a new file: `database/connection.js`.
+
+2. Install the npm packages `pg` and `env2`: `npm i pg env2`
+
+3. Import `Pool` and `env2`:
+    ```js
+    const { Pool } = require('pg');
+    require('env2')('./config.env');
+
+    if (!process.env.DB_URL) throw new Error('No Database URL!!!');
+    ```
+
+    - `{ Pool }` is syntactic sugar (shorten/simplify syntax with abstraction) ([destructuring assignment](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment)) that is equivalent to:
+        ```js
+        const pg = require('pg');
+        const Pool = pg.Pool;
+        ```
+
+    - [`Connection pooling`](https://en.wikipedia.org/wiki/Connection_pool) is a cache of multiple database connections that are kept open for a timeout period (`idleTimeoutMillis`) and reused when future requests are required, minimising the resource impact of opening/closing connections constantly for write/read heavy apps. Reusing connections minimises latency too. Debug/demo logging `Pool` might be helpful.
+    - Here we are requiring `config.env` that we created and has the `DB_URL` in it.
+    - This is a *gitignored* file with environment variables which are accessed with `process.env.NAME_HERE` and can be set in `config.env` *OR* production environments with `Heroku`
+    - The if statement will deliberately crash the script if the _connection information_ variable is missing
+
+4. Parsing the URL string using the WHATWG API :
+    ```js
+    const params = new URL(process.env.DB_URL);
+    ```
+
+    - `console.log('DB_URL:', params)` to see the URL object.
+    - [node URL Strings and URL Objects](https://nodejs.org/api/url.html#url_url_strings_and_url_objects)
+    - don't use the `Legacy URL API` to parse the any URL its `Deprecated`.
+
+5. Create a [`pg options`](https://node-postgres.com/features/connecting#programmatic) object:
+    ```js
+    const options = {
+      host: params.hostname,
+  		port: params.port,
+  		database: params.pathname.split('/')[1],
+  		max: process.env.DB_MAX_CONNECTIONS || 2,
+  		user: params.username,
+  		password: params.password,
+  		ssl: params.hostname !== 'localhost'
+		};
+    ```
+
+    - Use an appropriate number for `max`. More connections mean more memory is used, and too many can crash the database server. Always return connections to the pool (don't block/freeze query callbacks), or the pool will deplete. More connections mean more queries can be run at once and more redundancy incase connections are blocked/frozen.
+    - `ssl` will enable SSL (set to true) if you're not testing on a local machine.
+        - TLS / SSL (Secure Sockets Layer) ensures that you are connecting to the database from a secure server, when set to `true`, preventing external networks from being able to read/manipulate database queries with MITM attacks
+
+6. Export the Pool object with options with:
+    ```js
+    module.exports = new Pool(options);
+    ```
+
+    - This exports the Pool constructor/object with the previously set options object, for other files to use this connection pool with `dbConnection.query` where `dbConnection` is the exported `Pool`.
+    - another way to use the [pg-connection-string](https://github.com/iceddev/pg-connection-string).
+
+		```js
+		const options = {
+  		connectionString : process.env.DB_URL,
+  		ssl: true
+		};
+		```
+
+7. Create a file: `database/build.js` with this code:
+    ```js
+    const { readFileSync } = require("fs");
+		const { join } = require("path");
+
+		const connection = require("./connection");
+
+		const sql = readFileSync(join(__dirname, "build.sql")).toString();
+
+		connection
+  		.query(sql)
+  		.then(() => console.log("build created successfully!"))
+  		.catch(e => console.error('failed to build', e.stack));
+    ```
+
+    - Where `fs` is the Node file system module.
+    - `connection` is the previously exported pool object.
+    - `sql` is a string of the build script. Think of it as a single query (transaction / collection of queries compiled into one).
+    - For getting data, `connection.query` take `sql` string and returns a `promise` with the result if you want to use them, you can add them to `then` argument.
+    - `catch` returns any `error` that happens while building the `sql` file.
+    - This file should only be run **separately**. NEVER run this in a production after setup, or from other files (unless you know what you're doing).
+
+8. Now we build the tables we set out in build.sql by running our `build.js` file by running: `node database/build.js` in command line.
+
+9. Now go to your Postgres CLI client and test if everything worked by typing `SELECT * FROM superheroes;`. You should see the data we entered in `build.sql` appear.
+
