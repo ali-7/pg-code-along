@@ -130,13 +130,13 @@ Our database is now outlined, but we need a way to connect it
     ```js
     const options = {
       host: params.hostname,
-  		port: params.port,
-  		database: params.pathname.split('/')[1],
-  		max: process.env.DB_MAX_CONNECTIONS || 2,
-  		user: params.username,
-  		password: params.password,
-  		ssl: params.hostname !== 'localhost'
-		};
+      port: params.port,
+      database: params.pathname.split('/')[1],
+      max: process.env.DB_MAX_CONNECTIONS || 2,
+      user: params.username,
+      password: params.password,
+      ssl: params.hostname !== 'localhost'
+    };
     ```
 
     - Use an appropriate number for `max`. More connections mean more memory is used, and too many can crash the database server. Always return connections to the pool (don't block/freeze query callbacks), or the pool will deplete. More connections mean more queries can be run at once and more redundancy incase connections are blocked/frozen.
@@ -153,24 +153,24 @@ Our database is now outlined, but we need a way to connect it
 
 		```js
 		const options = {
-  		connectionString : process.env.DB_URL,
-  		ssl: true
+  		  connectionString : process.env.DB_URL,
+  		  ssl: true
 		};
 		```
 
 7. Create a file: `database/build.js` with this code:
     ```js
     const { readFileSync } = require("fs");
-		const { join } = require("path");
+    const { join } = require("path");
 
-		const connection = require("./connection");
+    const connection = require("./connection");
 
-		const sql = readFileSync(join(__dirname, "build.sql")).toString();
+    const sql = readFileSync(join(__dirname, "build.sql")).toString();
 
-		connection
-  		.query(sql)
-  		.then(() => console.log("build created successfully!"))
-  		.catch(e => console.error('failed to build', e.stack));
+    connection
+     .query(sql)
+     .then(() => console.log("build created successfully!"))
+     .catch(e => console.error('failed to build', e.stack));
     ```
 
     - Where `fs` is the Node file system module.
@@ -216,12 +216,12 @@ Let's first write a file that gets our information from the database.
 6. Create `/dynamic` endpoint and call `getData` to send the result.
     ```js
     router.get("/dynamic", (req, res) => {
-    dynamicSuperHeroes
-      .getData()
-      .then(result => {
-       res.json(result.rows);
-      })
-      .catch(err => console.log(err));
+      dynamicSuperHeroes
+        .getData()
+        .then(result => {
+          res.json(result.rows);
+        })
+        .catch(err => console.log(err));
     });
     ```
     - as we said `getData` will return a promise now with the results that we need.
