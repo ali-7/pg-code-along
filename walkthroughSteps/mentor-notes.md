@@ -180,7 +180,52 @@ Our database is now outlined, but we need a way to connect it
     - `catch` returns any `error` that happens while building the `sql` file.
     - This file should only be run **separately**. NEVER run this in a production after setup, or from other files (unless you know what you're doing).
 
-8. Now we build the tables we set out in build.sql by running our `build.js` file by running: `node database/build.js` in command line.
+8. Now we build the tables we set out in `build.sql` by running our `build.js` file by running: `node server/database/build.js` in command line.
 
 9. Now go to your Postgres CLI client and test if everything worked by typing `SELECT * FROM superheroes;`. You should see the data we entered in `build.sql` appear.
 
+## Step 5 – connecting to our database from the server
+Let's first write a file that gets our information from the database.
+
+
+1. Create a file `controllers/dynamic.js`.
+
+2. Import `connection.js`:
+    ```js
+    const dbConnection = require("../database/connection");
+    ```
+
+3. Write an asynchronous `getData` function that returns a promies .
+    ```js
+   const getData = () => {
+     return dbConnection.query(`SELECT * FROM superheroes;`);
+   };
+    ```
+
+    - note that `pool.query` returns a promies, [doc here](https://node-postgres.com/features/queries)
+
+4. Export `getData`:
+    ```js
+    module.exports = { getData };
+    ```
+
+5. Go to `controllers/index.js` and import `dynamic.js` as `dynamicSuperHeroes`:
+    ```js
+    const dynamicSuperHeroes = require("./dynamic");
+    ```
+6. Create `/dynamic` endpoint and call `getData` to send the result.
+    ```js
+    router.get("/dynamic", (req, res) => {
+    dynamicSuperHeroes
+      .getData()
+      .then(result => {
+       res.json(result.rows);
+      })
+      .catch(err => console.log(err));
+    });
+    ```
+    - as we said `getData` will return a promise now with the results that we need.
+    - `console.log(result.rows)`
+    - `res.json(result.rows);` to send the data to the front.
+
+7. Navigate to `http://localhost:3000/dynamic` to check it's worked.
